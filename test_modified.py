@@ -68,6 +68,8 @@ def main(args):
     nll_meter = util.AverageMeter()
     pred_dict = {}  # Predictions for TensorBoard
     sub_dict = {}   # Predictions for submission
+    true_pred_dict = {}  # Predictions for TensorBoard
+    true_sub_dict = {}   # Predictions for submission
     eval_file = vars(args)[f'{args.split}_eval_file']
     with open(eval_file, 'r') as fh:
         gold_dict = json_load(fh)
@@ -102,8 +104,17 @@ def main(args):
                                                       starts.tolist(),
                                                       ends.tolist(),
                                                       args.use_squad_v2)
+            
+            true_idx2pred, true_uuid2pred = util.convert_tokens(gold_dict,
+                                                      ids.tolist(),
+                                                      y1.tolist(),
+                                                      y2.tolist(),
+                                                      args.use_squad_v2)
+            
             pred_dict.update(idx2pred)
             sub_dict.update(uuid2pred)
+            true_pred_dict.update(true_idx2pred)
+            true_sub_dict.update(true_uuid2pred)
 
     # Log results (except for test set, since it does not come with labels)
     if args.split != 'test':
@@ -133,9 +144,10 @@ def main(args):
     log.info(f'Writing submission file to {sub_path}...')
     with open(sub_path, 'w', newline='', encoding='utf-8') as csv_fh:
         csv_writer = csv.writer(csv_fh, delimiter=',')
-        csv_writer.writerow(['Id', 'Predicted'])
+        csv_writer.writerow(['Id', 'Predicted' ,'True Answer'])
         for uuid in sorted(sub_dict):
-            csv_writer.writerow([uuid, sub_dict[uuid]])
+            csv_writer.writerow([uuid, sub_dict[uuid], true_sub_dict[uuid]])
+            
 
 
 if __name__ == '__main__':
