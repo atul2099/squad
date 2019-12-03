@@ -137,6 +137,7 @@ def process_file(filename, data_type, word_counter, char_counter):
                                "y1s": y1s,
                                "y2s": y2s,
                                "id": total}
+                    context_
                     examples.append(example)
                     eval_examples[str(total)] = {"context": context,
                                                  "question": ques,
@@ -350,8 +351,6 @@ def pre_process(args):
     # Process training set and use it to decide on the word/character vocabularies
     word_counter, char_counter = Counter(), Counter()
     train_examples, train_eval = process_file(args.train_file, "train", word_counter, char_counter)
-    print(train_examples[0],train_examples[1])
-    assert 1==2
     word_emb_mat, word2idx_dict = get_embedding(
         word_counter, 'word', emb_file=args.glove_file, vec_size=args.glove_dim, num_vectors=args.glove_num_vecs)
     char_emb_mat, char2idx_dict = get_embedding(
