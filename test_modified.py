@@ -145,7 +145,7 @@ def main(args):
     with open(sub_path, 'w', newline='', encoding='utf-8') as csv_fh:
         csv_writer = csv.writer(csv_fh, delimiter=',')
         csv_writer.writerow(['Id', 'Predicted' ,'True Answer'])
-        print(len(sub_dict), len(true_sub_dict) #command it
+        print(len(sub_dict), len(true_sub_dict)) #command it
         for uuid in sorted(sub_dict):
             csv_writer.writerow([uuid, sub_dict[uuid], true_sub_dict[uuid]])
             
