@@ -45,7 +45,6 @@ def main(args):
     model = BiDAF(word_vectors=word_vectors,
                   hidden_size=args.hidden_size,
                   char_vectors=char_vectors,
-                  drop_prob=args.drop_prob,
                   char_channel_size=100,
                   char_channel_width=4)
     model = nn.DataParallel(model, gpu_ids)
