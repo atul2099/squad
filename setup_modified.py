@@ -24,6 +24,8 @@ from subprocess import run
 from tqdm import tqdm
 from zipfile import ZipFile
 
+# import unicodedata
+
 
 def download_url(url, output_path, show_progress=True):
     class DownloadProgressBar(tqdm):
@@ -137,7 +139,7 @@ def process_file(filename, data_type, word_counter, char_counter):
                                "y1s": y1s,
                                "y2s": y2s,
                                "id": total}
-                    context_
+                    
                     examples.append(example)
                     eval_examples[str(total)] = {"context": context,
                                                  "question": ques,
@@ -244,11 +246,12 @@ def is_answerable(example):
     return len(example['y2s']) > 0 and len(example['y1s']) > 0
 
 
-def build_features(args, examples, data_type, out_file, word2idx_dict, char2idx_dict, is_test=False):
+def build_features(args, examples, data_type, out_file, word2idx_dict, char2idx_dict, is_test=False,tag2id = None, ent2id = None):
     para_limit = args.test_para_limit if is_test else args.para_limit
     ques_limit = args.test_ques_limit if is_test else args.ques_limit
     ans_limit = args.ans_limit
     char_limit = args.char_limit
+    nlp = spacy.load('en', parser=False)
 
     def drop_example(ex, is_test_=False):
         if is_test_:
@@ -272,6 +275,12 @@ def build_features(args, examples, data_type, out_file, word2idx_dict, char2idx_
     y1s = []
     y2s = []
     ids = []
+    context_features = []
+    context_tags = []
+    context_ents = []
+    all_train_tags = []
+    all_train_entities = []
+
     for n, example in tqdm(enumerate(examples)):
         total_ += 1
 
@@ -327,6 +336,71 @@ def build_features(args, examples, data_type, out_file, word2idx_dict, char2idx_
         y2s.append(end)
         ids.append(example["id"])
 
+        def annotate(context_tokens,ques_tokens,nlp):
+            
+            c_doc = nlp(' '.join(context_tokens))
+            q_doc = nlp(' '.join(ques_tokens))
+
+            # print(q_doc)
+            # print(c_doc)
+
+            # question_tokens = [unicodedata.normalize('NFD', w.text) for w in q_doc]
+            # context_tokens = [unicodedata.normalize('NFD', w.text) for w in c_doc]
+
+            question_tokens_lower = [w.lower() for w in ques_tokens]
+            context_tokens_lower = [w.lower() for w in context_tokens]
+
+            context_tags = [w.tag_ for w in c_doc]
+            context_ents = [w.ent_type_ for w in c_doc]
+            question_lemma = {w.lemma_ if w.lemma_ != '-PRON-' else w.text.lower() for w in q_doc}
+
+            question_tokens_lower_set = set(question_tokens_lower)
+
+            # match_origin = [w in question_tokens_set for w in context_tokens]
+            match_lower = [w in question_tokens_lower_set for w in context_tokens_lower]
+            match_lemma = [(w.lemma_ if w.lemma_ != '-PRON-' else w.text.lower()) in question_lemma for w in c_doc]
+
+
+            # term frequency in document
+            counter_ = Counter(context_tokens_lower)
+            total = len(context_tokens_lower)
+            context_tf = [counter_[w] / total for w in context_tokens_lower]
+
+            context_features = list(zip(match_lower, match_lemma, context_tf))
+
+            return context_features, context_tags, context_ents
+
+        context_feature, context_tag, context_ent = annotate(example["context_tokens"],example["ques_tokens"],nlp)
+
+        context_features.append(context_feature)
+        context_tags.append(context_tag)
+        context_ents.append(context_ent)
+
+        all_train_tags += context_tag
+        all_train_entities += context_ent
+
+        # print("******************")
+        # print(len(example["context_tokens"]),example["context_tokens"])
+        # print("******************")
+        # print(len(context_features),context_features)
+        # print("******************")
+        # print(len(context_tags),context_tags)
+        # print("******************")
+        # print(len(context_ents),context_ents)
+        # print("******************")
+
+    if tag2id == None:
+        all_train_tags = set(all_train_tags)
+        tag2id = {w: i for i, w in enumerate(all_train_tags)}
+
+    if ent2id == None:
+        all_train_entities = set(all_train_entities)
+        ent2id = {w: i for i, w in enumerate(all_train_entities)}
+
+    context_tags_id = [[tag2id[tag] for tag in row] for row in context_tags]
+    context_entities_id = [[ent2id[entity] for entity in row] for row in context_ents]
+
+
     np.savez(out_file,
              context_idxs=np.array(context_idxs),
              context_char_idxs=np.array(context_char_idxs),
@@ -334,10 +408,13 @@ def build_features(args, examples, data_type, out_file, word2idx_dict, char2idx_
              ques_char_idxs=np.array(ques_char_idxs),
              y1s=np.array(y1s),
              y2s=np.array(y2s),
-             ids=np.array(ids))
+             ids=np.array(ids),
+             context_tags_id = np.array(context_tags_id),
+             context_entities_id = np.array(context_entities_id),
+             context_features = np.array(context_features))
     print(f"Built {total} / {total_} instances of features in total")
     meta["total"] = total
-    return meta
+    return meta, tag2id, ent2id
 
 
 def save(filename, obj, message=None):
@@ -356,10 +433,12 @@ def pre_process(args):
     char_emb_mat, char2idx_dict = get_embedding(
         char_counter, 'char', emb_file=None, vec_size=args.char_dim)
 
+    train_meta, tag2id, ent2id = build_features(args, train_examples, "train", args.train_record_file, word2idx_dict, char2idx_dict, None, None)
+
     # Process dev and test sets
     dev_examples, dev_eval = process_file(args.dev_file, "dev", word_counter, char_counter)
-    build_features(args, train_examples, "train", args.train_record_file, word2idx_dict, char2idx_dict)
-    dev_meta = build_features(args, dev_examples, "dev", args.dev_record_file, word2idx_dict, char2idx_dict)
+    
+    dev_meta, tag2id, ent2id = build_features(args, dev_examples, "dev", args.dev_record_file, word2idx_dict, char2idx_dict, tag2id, ent2id)
     if args.include_test_examples:
         test_examples, test_eval = process_file(args.test_file, "test", word_counter, char_counter)
         save(args.test_eval_file, test_eval, message="test eval")
