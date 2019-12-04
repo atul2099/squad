@@ -66,13 +66,13 @@ class BiDAF(nn.Module):
         c_emb = self.emb(cw_idxs, cc_idxs)         # (batch_size, c_len, hidden_size)
         q_emb = self.emb(qw_idxs, qc_idxs)         # (batch_size, q_len, hidden_size)
 
-        c_enc = self.enc(c_emb, c_mask)    # (batch_size, c_len, 2 * hidden_size)
-        q_enc = self.enc(q_emb, q_mask)    # (batch_size, q_len, 2 * hidden_size)
+        c_enc = self.enc(c_emb, cw_idxs)    # (batch_size, c_len, 2 * hidden_size)
+        q_enc = self.enc(q_emb, qw_idxs)    # (batch_size, q_len, 2 * hidden_size)
 
         att = self.att(c_enc, q_enc,
                        c_mask, q_mask)    # (batch_size, c_len, 8 * hidden_size)
 
-        mod = self.mod(att, c_mask)        # (batch_size, c_len, 2 * hidden_size)
+        mod = self.mod(att, cw_idxs)        # (batch_size, c_len, 2 * hidden_size)
 
         out = self.out(att, mod, c_mask)  # 2 tensors, each (batch_size, c_len)
 
