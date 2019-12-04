@@ -130,23 +130,25 @@ class RNNEncoder(nn.Module):
         return x
 
 class TransformerEncoder(nn.Module):
-    def __init__(self, max_len, dim=8, output_dim= 100, num_layers=4, nhead=2, dropout=0.0):
+    def __init__(self, max_len, dim=8, output_dim= 100, num_layers=4, nhead=2, dropout=0.0, pad_idx = 0):
         super().__init__()
         
         self.position_embed = nn.Embedding(max_len, dim)
         encoder_layer = nn.TransformerEncoderLayer(d_model=dim, nhead=nhead, dim_feedforward=dim, dropout=dropout)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         self.projection = nn.Linear(dim, output_dim)
+        self.pad_idx = pad_idx
     
-    def features(self, emb, attn_mask):
+    def features(self, emb, token_indices):
 
         pos = torch.arange(len(emb), device=emb.device).unsqueeze(1)
         x = emb + self.position_embed(pos)
+        attn_mask = ~token_indices.ne(self.pad_idx).transpose(0, 1)
         x = self.encoder(x, src_key_padding_mask=attn_mask)
         return x
     
-    def forward(self, emb, attn_mask):
-        x = self.features(emb, attn_mask)
+    def forward(self, emb, token_indices):
+        x = self.features(emb, token_indices)
         x = self.projection(x)
         return x        
 
