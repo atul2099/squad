@@ -38,24 +38,24 @@ class BiDAF(nn.Module):
                                     char_channel_width=char_channel_width,
                                     drop_prob=drop_prob)
 
-        self.enc = layers.TransformerEncoder(max_len = 400, dim = hidden_size,output_dim = hidden_size//2, num_layers = 2 ,nhead=4,  dropout = drop_prob)
+        self.enc = layers.TransformerEncoder(max_len = 400, dim = hidden_size, num_layers = 2 ,nhead=4,  dropout = drop_prob)
 
         # self.enc = layers.RNNEncoder(input_size=hidden_size,
         #                              hidden_size=hidden_size,
         #                              num_layers=1,
         #                              drop_prob=drop_prob)
 
-        self.att = layers.BiDAFAttention(hidden_size= hidden_size//2,
+        self.att = layers.BiDAFAttention(hidden_size= hidden_size,
                                          drop_prob=drop_prob)
 
-        # self.mod = layers.RNNEncoder(input_size=8 * hidden_size,
-        #                              hidden_size=hidden_size,
-        #                              num_layers=2,
-        #                              drop_prob=drop_prob)
+        self.mod = layers.RNNEncoder(input_size= 4 * hidden_size,
+                                     hidden_size=hidden_size,
+                                     num_layers=2,
+                                     drop_prob=drop_prob)
 
-        self.mod = layers.TransformerEncoder(max_len = 400, dim = 2*hidden_size, output_dim = hidden_size//2,num_layers = 2,nhead=4, dropout = drop_prob)
+#         self.mod = layers.TransformerEncoder(max_len = 400, dim = 2*hidden_size, output_dim = hidden_size//2,num_layers = 2,nhead=4, dropout = drop_prob)
 
-        self.out = layers.BiDAFOutput(hidden_size=hidden_size//4,
+        self.out = layers.BiDAFOutput(hidden_size=hidden_size//2,
                                       drop_prob=drop_prob)
 
     def forward(self, cw_idxs, cc_idxs, qw_idxs, qc_idxs):
