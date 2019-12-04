@@ -130,13 +130,13 @@ class RNNEncoder(nn.Module):
         return x
 
 class TransformerEncoder(nn.Module):
-    def __init__(self, max_len, dim=8, output_dim= 100, num_layers=4, nhead=2, dropout=0.0, pad_idx = 0):
+    def __init__(self, max_len, dim=8, output_dim= 100, num_layers=2, nhead=2, dropout=0.0, pad_idx = 0):
         super().__init__()
         
         self.position_embed = nn.Embedding(max_len, dim)
         encoder_layer = nn.TransformerEncoderLayer(d_model=dim, nhead=nhead, dim_feedforward=dim, dropout=dropout)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
-        self.projection = nn.Linear(dim, output_dim)
+#         self.projection = nn.Linear(dim, output_dim)
         self.pad_idx = pad_idx
     
     def features(self, emb, token_indices):
@@ -149,7 +149,7 @@ class TransformerEncoder(nn.Module):
     
     def forward(self, emb, token_indices):
         x = self.features(emb, token_indices)
-        x = self.projection(x)
+#         x = self.projection(x)
         return x        
 
 class BiDAFAttention(nn.Module):
