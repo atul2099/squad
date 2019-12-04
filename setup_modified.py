@@ -366,15 +366,23 @@ def build_features(args, examples, data_type, out_file, word2idx_dict, char2idx_
             total = len(context_tokens_lower)
             context_tf = [counter_[w] / total for w in context_tokens_lower]
 
-            context_features = list(zip(match_lower, match_lemma, context_tf))
+            context_features = np.array(zip(match_lower, match_lemma, context_tf))
 
-            return context_features, context_tags, context_ents
+            return context_features, np.array(context_tags), np.array(context_ents)
 
         context_feature, context_tag, context_ent = annotate(example["context_tokens"],example["ques_tokens"],nlp)
 
-        context_features.append(context_feature)
-        context_tags.append(context_tag)
-        context_ents.append(context_ent)
+        context_feature_blank = np.zeros([para_limit], dtype=np.int32)
+        context_ent_blank = np.zeros([para_limit], dtype=np.int32)
+        context_tag_blank = np.zeros([para_limit, 3], dtype=np.int32)
+
+        context_feature_blank[:len(context_feature)] = context_feature
+        context_ent_blank[:len(context_ent)] = context_ent
+        context_tag_blank[:len(context_tag)] = context_tag
+
+        context_features.append(context_feature_blank)
+        context_tags.append(context_tag_blank)
+        context_ents.append(context_ent_blank)
 
         all_train_tags += context_tag
         all_train_entities += context_ent
@@ -397,8 +405,26 @@ def build_features(args, examples, data_type, out_file, word2idx_dict, char2idx_
         all_train_entities = set(all_train_entities)
         ent2id = {w: i for i, w in enumerate(all_train_entities)}
 
-    context_tags_id = [[tag2id[tag] for tag in row] for row in context_tags]
-    context_entities_id = [[ent2id[entity] for entity in row] for row in context_ents]
+    context_tags_id = []
+    context_entities_id = []
+
+    for row in context_tags:
+        blank_row = []
+        for tag in row:
+            try:
+                blank_row.append(tag2id[tag])
+            except KeyError:
+                blank_row.append(-1)
+        context_tags_id.append(blank_row)
+
+    for row in context_entities_id:
+        blank_row = []
+        for entity in row:
+            try:
+                blank_row.append(ent2id[entity])
+            except KeyError:
+                blank_row.append(-1)
+        context_entities_id.append(blank_row)
 
 
     np.savez(out_file,
@@ -438,6 +464,10 @@ def pre_process(args):
     # Process dev and test sets
     dev_examples, dev_eval = process_file(args.dev_file, "dev", word_counter, char_counter)
     
+    save('tag2id.json', tag2id, message="tag dictionary")
+    save('ent2id.json', ent2id, message="entity dictionary")
+
+
     dev_meta, tag2id, ent2id = build_features(args, dev_examples, "dev", args.dev_record_file, word2idx_dict, char2idx_dict, tag2id, ent2id)
     if args.include_test_examples:
         test_examples, test_eval = process_file(args.test_file, "test", word_counter, char_counter)

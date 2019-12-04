@@ -44,13 +44,18 @@ class SQuAD(data.Dataset):
     def __init__(self, data_path, use_v2=True):
         super(SQuAD, self).__init__()
 
-        dataset = np.load(data_path)
+
+        dataset = np.load(data_path, allow_pickle=True)
         self.context_idxs = torch.from_numpy(dataset['context_idxs']).long()
         self.context_char_idxs = torch.from_numpy(dataset['context_char_idxs']).long()
         self.question_idxs = torch.from_numpy(dataset['ques_idxs']).long()
         self.question_char_idxs = torch.from_numpy(dataset['ques_char_idxs']).long()
         self.y1s = torch.from_numpy(dataset['y1s']).long()
         self.y2s = torch.from_numpy(dataset['y2s']).long()
+        self.context_tags_id = torch.from_numpy(dataset['context_tags_id']).long()
+        self.context_entities_id = torch.from_numpy(dataset['context_entities_id']).long()
+        self.context_features = torch.from_numpy(dataset['context_features']).long()
+
 
         if use_v2:
             # SQuAD 2.0: Use index 0 for no-answer token (token 1 = OOV)
@@ -79,7 +84,10 @@ class SQuAD(data.Dataset):
                    self.question_char_idxs[idx],
                    self.y1s[idx],
                    self.y2s[idx],
-                   self.ids[idx])
+                   self.ids[idx],
+                   self.context_tags_id[idx],
+                   self.context_entities_id[idx],
+                   self.context_features[idx])
 
         return example
 
@@ -127,7 +135,9 @@ def collate_fn(examples):
     # Group by tensor type
     context_idxs, context_char_idxs, \
         question_idxs, question_char_idxs, \
-        y1s, y2s, ids = zip(*examples)
+        y1s, y2s, ids, context_tags_id , \
+        context_entities_id, context_features \
+        = zip(*examples)
 
     # Merge into batch tensors
     context_idxs = merge_1d(context_idxs)
@@ -137,10 +147,14 @@ def collate_fn(examples):
     y1s = merge_0d(y1s)
     y2s = merge_0d(y2s)
     ids = merge_0d(ids)
+    context_tags_id = merge_1d(context_tags_id)
+    context_entities_id = merge_1d(context_entities_id)
+    context_features = merge_2d(context_features)
 
     return (context_idxs, context_char_idxs,
             question_idxs, question_char_idxs,
-            y1s, y2s, ids)
+            y1s, y2s, ids, context_tags_id,
+            context_entities_id, context_features)
 
 
 class AverageMeter:
