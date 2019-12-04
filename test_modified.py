@@ -115,7 +115,7 @@ def main(args):
             sub_dict.update(uuid2pred)
             true_pred_dict.update(true_idx2pred)
             true_sub_dict.update(true_uuid2pred)
-
+            
     # Log results (except for test set, since it does not come with labels)
     if args.split != 'test':
         results = util.eval_dicts(gold_dict, pred_dict, args.use_squad_v2)
@@ -145,6 +145,7 @@ def main(args):
     with open(sub_path, 'w', newline='', encoding='utf-8') as csv_fh:
         csv_writer = csv.writer(csv_fh, delimiter=',')
         csv_writer.writerow(['Id', 'Predicted' ,'True Answer'])
+        print(len(sub_dict), len(true_sub_dict)) #command it
         for uuid in sorted(sub_dict):
             csv_writer.writerow([uuid, sub_dict[uuid], true_sub_dict[uuid]])
             
