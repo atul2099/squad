@@ -53,7 +53,7 @@ def url_to_data_path(url):
 def download(args):
     downloads = [
         # Can add other downloads here (e.g., other word vectors)
-        ('GloVe word vectors', args.glove_url),
+        # ('GloVe word vectors', args.glove_url),
     ]
 
     for name, url in downloads:
