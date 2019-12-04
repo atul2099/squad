@@ -53,7 +53,7 @@ class BiDAF(nn.Module):
         #                              num_layers=2,
         #                              drop_prob=drop_prob)
 
-        self.mod = layers.TransformerEncoder(max_len = 400, dim = 8*hidden_size, output_dim = 4*hidden_size,num_layers = 4,nhead=2)
+        self.mod = layers.TransformerEncoder(max_len = 400, dim = 8*hidden_size, output_dim = 2*hidden_size,num_layers = 4,nhead=2)
 
         self.out = layers.BiDAFOutput(hidden_size=4*hidden_size,
                                       drop_prob=drop_prob)
